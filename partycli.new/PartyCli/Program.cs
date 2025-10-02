@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using PartyCli.Domain.Interfaces;
+using PartyCli.Domain.Models;
 using PartyCli.Infrastructure.Persistence;
 
 namespace PartyCli
@@ -80,7 +81,7 @@ namespace PartyCli
                         //Tcp = 5
                         //Nordlynx = 35
                         var query = new VpnServerQuery(5,null,null,null,null, null);
-                        var serverList = await GetAllServerByProtocolListAsync((int)query.Protocol.Value);
+                        var serverList = await GetAllServerByProtocolListAsync(query.ProtocolId.Value);
                         await StoreValue("serverlist", serverList, false);
                         await Log("Saved new server list: " + serverList);
                         DisplayList(serverList);
@@ -147,7 +148,7 @@ namespace PartyCli
 
         static void DisplayList(string serverListString)
         {
-            var serverList = JsonConvert.DeserializeObject<List<ServerModel>>(serverListString);
+            var serverList = JsonConvert.DeserializeObject<List<Server>>(serverListString);
             Console.WriteLine("Server list:");
             Console.WriteLine("─────────────────────────────────────");
             for (var index = 0; index < serverList.Count; index++)
@@ -162,64 +163,21 @@ namespace PartyCli
 
         static async Task Log(string action)
         {
-            var newLog = new LogModel
-            {
-                Action = action,
-                Time = DateTime.Now
-            };
-            List<LogModel> currentLog;
+            var newLog = new AuditLogEntry(action);
+            List<AuditLogEntry>? currentLog;
             var existingLog = await _settings.GetValueAsync("log");
             if (!string.IsNullOrEmpty(existingLog))
             {
-                currentLog = JsonConvert.DeserializeObject<List<LogModel>>(existingLog);
+                currentLog = JsonConvert.DeserializeObject<List<AuditLogEntry>>(existingLog);
                 currentLog.Add(newLog);
             }
             else
             {
-                currentLog = new List<LogModel> { newLog };
+                currentLog = new List<AuditLogEntry> { newLog };
             }
 
             await StoreValue("log", JsonConvert.SerializeObject(currentLog), false);
         }
-    }
-
-    internal class VpnServerQuery
-    {
-             public int? Protocol { get; set; }
-
-            public int? CountryId { get; set;}
-
-            public int? CityId { get; set;}
-
-            public int? RegionId { get; set;}
-
-            public int? SpecificServcerId { get; set;}
-
-            public int? ServerGroupId { get; set;}
-
-            public VpnServerQuery(int? protocol, int? countryId, int? cityId, int? regionId, int? specificServcerId, int? serverGroupId)
-            {
-                Protocol = protocol;
-                CountryId = countryId;
-                CityId = cityId;
-                RegionId = regionId;
-                SpecificServcerId = specificServcerId;
-                ServerGroupId = serverGroupId;
-            }
-    }
-
-    class LogModel
-    {
-        public string Action { get; set; }
-        public DateTime Time { get; set; }
-    }
-
-    class ServerModel
-    {
-        public string Name { get; set; }
-        public int Load { get; set; }
-        public string Status { get; set; }
-
     }
 
     enum States
