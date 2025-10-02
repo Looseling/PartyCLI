@@ -147,13 +147,17 @@ namespace PartyCli
 
         static void DisplayList(string serverListString)
         {
-            var serverlist = JsonConvert.DeserializeObject<List<ServerModel>>(serverListString);
-            Console.WriteLine("Server list: ");
-            for (var index = 0; index < serverlist.Count; index++)
+            var serverList = JsonConvert.DeserializeObject<List<ServerModel>>(serverListString);
+            Console.WriteLine("Server list:");
+            Console.WriteLine("─────────────────────────────────────");
+            for (var index = 0; index < serverList.Count; index++)
             {
-                Console.WriteLine("Name: " + serverlist[index].Name);
+                Console.WriteLine("Name: " + serverList[index].Name);
+                Console.WriteLine($"Load:   {serverList[index].Load}%");
+                Console.WriteLine($"Status: {serverList[index].Status}");
+                Console.WriteLine("─────────────────────────────────────");
             }
-            Console.WriteLine("Total servers: " + serverlist.Count);
+            Console.WriteLine("Total servers: " + serverList.Count);
         }
 
         static async Task Log(string action)
