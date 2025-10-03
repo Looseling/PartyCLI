@@ -1,189 +1,76 @@
-﻿using Newtonsoft.Json;
-using PartyCli.Domain.Interfaces;
-using PartyCli.Domain.Models;
+﻿using System;
+using System.IO;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
+using Serilog;
+using PartyCli;
+using PartyCli.Application.Services;
+using PartyCli.Commands;
+using PartyCli.Domain.Interfaces.Api;
+using PartyCli.Domain.Interfaces.Display;
+using PartyCli.Domain.Interfaces.Persistence;
+using PartyCli.Infrastructure.Api;
+using PartyCli.Infrastructure.Display;
 using PartyCli.Infrastructure.Persistence;
+using Spectre.Console.Cli;
 
-namespace PartyCli
+ConfigureSerilog();
+
+try
 {
-    class Program
+    Log.Information("Starting PartyCli application");
+
+    var services = new ServiceCollection();
+
+    // Logging
+    services.AddLogging(builder =>
     {
-        private static readonly HttpClient client = new HttpClient();
-        private static readonly ISettingsRepository _settings = new JsonSettingsRepository();
+        builder.ClearProviders();
+        builder.AddSerilog();
+    });
 
-        static async Task Main(string[] args)
-        {
-            var currentState = States.none;
-            string name = null;
-            int argIndex = 1;
+    // HTTP Client
+    services.AddHttpClient<IVpnServerApiRepository, NordVpnApiClient>();
 
-            foreach (string arg in args)
-            {
-                if (currentState == States.none)
-                {
-                    if (arg == "server_list")
-                    {
-                        currentState = States.server_list;
-                        if (argIndex >= args.Count())
-                        {
-                            var serverList = await GetAllServersListAsync();
-                            await StoreValue("serverlist", serverList, false);
-                            await Log("Saved new server list: " + serverList);
-                            DisplayList(serverList);
-                        }
-                    }
-                    if (arg == "config")
-                    {
-                        currentState = States.config;
-                    }
-                }
-                else if (currentState == States.config)
-                {
-                    if (name == null)
-                    {
-                        name = arg;
-                    }
-                    else
-                    {
-                        var newName = ProccessName(name);
-                        await StoreValue(newName, arg);
-                        await Log("Changed " + newName + " to " + arg);
-                        name = null;
-                    }
-                }
-                else if (currentState == States.server_list)
-                {
-                    if (arg == "--local")
-                    {
-                        var serverlist = await _settings.GetValueAsync("serverlist");
-                        if (!String.IsNullOrEmpty(serverlist)) 
-                        { 
-                            DisplayList(serverlist);
-                        } 
-                        else
-                        {
-                            Console.WriteLine("Error: There are no server data in local storage");
-                        }
-                    }
-                    else if (arg == "--france")
-                    {
-                        //france == 74
-                        //albania == 2
-                        //Argentina == 10
-                        var query = new VpnServerQuery(null,74,null,null,null, null);
-                        var serverList = await GetAllServerByCountryListAsync(query.CountryId.Value); //France id == 74
-                        await StoreValue("serverlist", serverList, false);
-                        await Log("Saved new server list: " + serverList);
-                        DisplayList(serverList);
-                    }
-                    else if (arg == "--TCP")
-                    {
-                        //UDP = 3
-                        //Tcp = 5
-                        //Nordlynx = 35
-                        var query = new VpnServerQuery(5,null,null,null,null, null);
-                        var serverList = await GetAllServerByProtocolListAsync(query.ProtocolId.Value);
-                        await StoreValue("serverlist", serverList, false);
-                        await Log("Saved new server list: " + serverList);
-                        DisplayList(serverList);
-                    }
-                }
-                argIndex = argIndex + 1;
-            }
+    // Repositories and Services
+    services.AddSingleton<IFilePathProvider, AppDataFilePathProvider>();
+    services.AddSingleton<IServerRepository, JsonServerRepository>();
+    services.AddSingleton<IDisplayService, ConsoleDisplayService>();
+    // services.AddSingleton<IDisplayService, ColoredConsoleDisplayService>();
+    services.AddSingleton<IServerService,ServerService>();
 
-            if(currentState == States.none)
-            {
-                Console.WriteLine("To get and save all servers, use command: partycli.exe server_list");
-                Console.WriteLine("To get and save France servers, use command: partycli.exe server_list --france");
-                Console.WriteLine("To get and save servers that support TCP protocol, use command: partycli.exe server_list --TCP");
-                Console.WriteLine("To see saved list of servers, use command: partycli.exe server_list --local ");
-            }
-            Console.Read();
-        }
+    var app = new CommandApp(new TypeRegistrar(services));
 
-        static async Task StoreValue(string name, string value, bool writeToConsole = true)
-        {
-            try 
-            { 
-                await _settings.SetValueAsync(name, value);
-                if (writeToConsole) 
-                { 
-                    Console.WriteLine("Changed " + name + " to " + value);
-                }
-            }
-            catch 
-            {
-                Console.WriteLine("Error: Couldn't save " + name + ". Check if command was input correctly." );
-            }
-        }
-
-        static string ProccessName(string name)
-        {
-            name = name.Replace("-", string.Empty);
-            return name;
-        }
-
-        static async Task<string> GetAllServersListAsync()
-        {
-                var request = new HttpRequestMessage(HttpMethod.Get, "https://api.nordvpn.com/v1/servers");
-                var response = await client.SendAsync(request);
-                var responseString = await response.Content.ReadAsStringAsync();
-                return responseString;
-        }
-
-        static async Task<string> GetAllServerByCountryListAsync(int countryId)
-        {
-            var request = new HttpRequestMessage(HttpMethod.Get, "https://api.nordvpn.com/v1/servers?filters[servers_technologies][id]=35&filters[country_id]=" + countryId);
-            var response = await client.SendAsync(request);
-            var responseString = await response.Content.ReadAsStringAsync();
-            return responseString;
-        }
-
-        static async Task<string> GetAllServerByProtocolListAsync(int vpnProtocol)
-        {
-            var request = new HttpRequestMessage(HttpMethod.Get, "https://api.nordvpn.com/v1/servers?filters[servers_technologies][id]=" + vpnProtocol);
-            var response = await client.SendAsync(request);
-            var responseString = await response.Content.ReadAsStringAsync();
-            return responseString;
-        }
-
-        static void DisplayList(string serverListString)
-        {
-            var serverList = JsonConvert.DeserializeObject<List<Server>>(serverListString);
-            Console.WriteLine("Server list:");
-            Console.WriteLine("─────────────────────────────────────");
-            for (var index = 0; index < serverList.Count; index++)
-            {
-                Console.WriteLine("Name: " + serverList[index].Name);
-                Console.WriteLine($"Load:   {serverList[index].Load}%");
-                Console.WriteLine($"Status: {serverList[index].Status}");
-                Console.WriteLine("─────────────────────────────────────");
-            }
-            Console.WriteLine("Total servers: " + serverList.Count);
-        }
-
-        static async Task Log(string action)
-        {
-            var newLog = new AuditLogEntry(action);
-            List<AuditLogEntry>? currentLog;
-            var existingLog = await _settings.GetValueAsync("log");
-            if (!string.IsNullOrEmpty(existingLog))
-            {
-                currentLog = JsonConvert.DeserializeObject<List<AuditLogEntry>>(existingLog);
-                currentLog.Add(newLog);
-            }
-            else
-            {
-                currentLog = new List<AuditLogEntry> { newLog };
-            }
-
-            await StoreValue("log", JsonConvert.SerializeObject(currentLog), false);
-        }
-    }
-
-    enum States
+    app.Configure(config =>
     {
-        none = 0,
-        server_list = 1,
-        config = 2,
-    };
+        config.AddCommand<ServerListCommand>("server_list")
+            .WithDescription("Fetch and display VPN servers");
+    });
+
+    return await app.RunAsync(args);
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Application terminated unexpectedly");
+    return 1;
+}
+finally
+{
+    Log.CloseAndFlush();
+}
+
+
+void ConfigureSerilog()
+{
+    var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+    var logFolder = Path.Combine(appData, "partycli", "logs");
+    Directory.CreateDirectory(logFolder);
+    var logPath = Path.Combine(logFolder, "partycli-.txt");
+
+    Log.Logger = new LoggerConfiguration()
+        .MinimumLevel.Information()
+        .WriteTo.Console()
+        .WriteTo.File(logPath, rollingInterval: RollingInterval.Day)
+        .CreateLogger();
 }

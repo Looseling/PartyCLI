@@ -54,7 +54,7 @@ namespace partycli
                     if (arg == "--local")
                     {
                         if (!String.IsNullOrEmpty(Properties.Settings.Default.serverlist)) { 
-                        displayList(Properties.Settings.Default.serverlist);
+                            displayList(Properties.Settings.Default.serverlist);
                         } else
                         {
                             Console.WriteLine("Error: There are no server data in local storage");
@@ -170,7 +170,7 @@ namespace partycli
             {
                 currentLog = new List<LogModel> { newLog };
             }
-
+            
             storeValue("log", JsonConvert.SerializeObject(currentLog), false);
         }
     }

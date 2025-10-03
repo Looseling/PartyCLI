@@ -10,12 +10,20 @@
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.2" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="Moq" Version="4.20.72" />
+    <PackageReference Include="Serilog" Version="4.3.1-dev-02387" />
+    <PackageReference Include="Shouldly" Version="4.3.0" />
+    <PackageReference Include="Spectre.Console.Testing" Version="0.51.2-preview.0.2" />
     <PackageReference Include="xunit" Version="2.9.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
   </ItemGroup>
 
   <ItemGroup>
     <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PartyCli\PartyCli.csproj" />
   </ItemGroup>
 
 </Project>
