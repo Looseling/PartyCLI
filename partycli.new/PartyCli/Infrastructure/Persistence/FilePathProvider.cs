@@ -1,6 +1,3 @@
-using System;
-using System.IO;
-
 namespace PartyCli.Infrastructure.Persistence;
 
 public class AppDataFilePathProvider : IFilePathProvider

@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using PartyCli.Domain.Models;
 
 namespace PartyCli.Domain.Interfaces.Display;

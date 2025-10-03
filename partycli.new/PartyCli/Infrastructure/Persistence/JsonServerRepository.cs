@@ -1,7 +1,4 @@
-using System.Collections.Generic;
-using System.IO;
 using System.Text.Json;
-using System.Threading.Tasks;
 using PartyCli.Domain.Interfaces.Persistence;
 using PartyCli.Domain.Models;
 
@@ -13,17 +10,6 @@ public class JsonServerRepository : IServerRepository
     public JsonServerRepository(IFilePathProvider filePathProvider)
     {
         _filePath = filePathProvider.GetServerFilePath();
-    }
-    
-    // Tests should be able to mock the filePath
-    internal JsonServerRepository(string filePath)
-    {
-        _filePath = filePath;
-        var directory = Path.GetDirectoryName(filePath);
-        if (!string.IsNullOrEmpty(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
     }
     
     public async Task SaveServersAsync(List<Server> servers)

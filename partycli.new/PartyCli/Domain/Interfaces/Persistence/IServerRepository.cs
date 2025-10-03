@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using PartyCli.Domain.Models;
 
 namespace PartyCli.Domain.Interfaces.Persistence;

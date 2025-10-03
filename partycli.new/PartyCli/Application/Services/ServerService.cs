@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PartyCli.Domain.Interfaces.Api;
 using PartyCli.Domain.Interfaces.Persistence;

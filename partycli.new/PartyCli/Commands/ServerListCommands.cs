@@ -1,13 +1,9 @@
-using System;
-using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
 using PartyCli.Application.Services;
 using PartyCli.Domain.Interfaces.Display;
 using PartyCli.Domain.Models;
 using Spectre.Console.Cli;
 using System.ComponentModel;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace PartyCli.Commands;
 
