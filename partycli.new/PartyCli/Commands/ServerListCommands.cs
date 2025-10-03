@@ -17,10 +17,6 @@ public class ServerListSettings : CommandSettings
     [Description("Fetch TCP protocol servers")]
     public bool Tcp { get; set; }
 
-    [CommandOption("--france")]
-    [Description("Fetch France servers")]
-    public bool France { get; set; }
-
     [CommandOption("--country <COUNTRY>")]
     [Description("Fetch servers for specific country (e.g., france, albania, argentina)")]
     public string? Country { get; set; }

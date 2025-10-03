@@ -1,9 +1,5 @@
-using System.Collections.Generic;
-using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PartyCli.Domain.Models;
 using PartyCli.Domain.Interfaces.Api;
@@ -62,7 +58,7 @@ public class NordVpnApiClient : IVpnServerApiRepository
     {
         _logger.LogDebug("Fetching servers for country {CountryId}", countryId);
         
-        var url = $"{Constants.BaseNordUrl}servers?filters[servers_technologies][id]=35&filters[country_id]={countryId}";
+        var url = $"{Constants.BaseNordUrl}servers?filters[servers_technologies][id]={Protocols.NordLynx}&filters[country_id]={countryId}";
         var response = await _httpClient.GetAsync(url, cancellationToken);
 
         response.EnsureSuccessStatusCode();
