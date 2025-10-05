@@ -1,24 +1,52 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Serilog;
-using PartyCli;
+using PartyCli.Application.Commands;
 using PartyCli.Application.Services;
-using PartyCli.Commands;
 using PartyCli.Domain.Interfaces.Api;
 using PartyCli.Domain.Interfaces.Display;
 using PartyCli.Domain.Interfaces.Persistence;
 using PartyCli.Infrastructure.Api;
 using PartyCli.Infrastructure.Display;
 using PartyCli.Infrastructure.Persistence;
+using Serilog;
 using Spectre.Console.Cli;
-
-ConfigureSerilog();
 
 try
 {
+    var configuration = new ConfigurationBuilder()
+        .AddJsonFile("appsettings.json", false, true)
+        .AddEnvironmentVariables()
+        .Build();
+
+    ConfigureSerilog();
+
     Log.Information("Starting PartyCli application");
 
+    // Setup DI
     var services = new ServiceCollection();
+    ConfigureServices(services, configuration);
+
+    var app = new CommandApp(new MyTypeRegistrar(services));
+    ConfigureCommands(app);
+
+    return await app.RunAsync(args);
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Application terminated unexpectedly");
+    Console.WriteLine(ex.Message);
+    return 1;
+}
+finally
+{
+    Log.CloseAndFlush();
+}
+
+void ConfigureServices(IServiceCollection services, IConfiguration configuration)
+{
+    // Configuration
+    services.AddSingleton(configuration);
 
     // Logging
     services.AddLogging(builder =>
@@ -27,47 +55,57 @@ try
         builder.AddSerilog();
     });
 
-    // HTTP Client
-    services.AddHttpClient<IVpnServerApiRepository, NordVpnApiClient>();
+    // HTTP clients
+    services.AddHttpClient<IVpnServerApiClient, NordVpnApiClient>(client =>
+    {
+        var baseurl = configuration["NordVpn:Server:BaseUrl"] ??
+                      throw new NullReferenceException("NordVpn server baseurl is null");
+        client.BaseAddress = new Uri(baseurl);
+    });
 
-    // Repositories and Services
+
+    // Infrastructure
     services.AddSingleton<IFilePathProvider, AppDataFilePathProvider>();
-    services.AddSingleton<IServerRepository, JsonServerRepository>();
+    services.AddSingleton<ILocalServerRepository, JsonLocalServerRepository>();
     services.AddSingleton<IDisplayService, ConsoleDisplayService>();
+    services.AddSingleton<ICountryLookup, CountryLookupFromDictionary>();
     // services.AddSingleton<IDisplayService, ColoredConsoleDisplayService>();
-    services.AddSingleton<IServerService,ServerService>();
 
-    var app = new CommandApp(new TypeRegistrar(services));
+    // Application
+    services.AddSingleton<IServerService, ServerService>();
+}
 
+void ConfigureCommands(CommandApp app)
+{
     app.Configure(config =>
     {
+        config.ValidateExamples();
+        config.PropagateExceptions();
+        config.UseStrictParsing();
+
         config.AddCommand<ServerListCommand>("server_list")
             .WithDescription("Fetch and display VPN servers");
     });
-
-    return await app.RunAsync(args);
 }
-catch (Exception ex)
-{
-    Log.Fatal(ex, "Application terminated unexpectedly");
-    return 1;
-}
-finally
-{
-    Log.CloseAndFlush();
-}
-
 
 void ConfigureSerilog()
 {
-    var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-    var logFolder = Path.Combine(appData, "partycli", "logs");
-    Directory.CreateDirectory(logFolder);
-    var logPath = Path.Combine(logFolder, "partycli-.txt");
+    var logPath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        "partycli",
+        "logs",
+        "partycli-.txt"
+    );
 
-    Log.Logger = new LoggerConfiguration()
+    Directory.CreateDirectory(Path.GetDirectoryName(logPath)!);
+
+    var loggerConfig = new LoggerConfiguration()
         .MinimumLevel.Information()
-        .WriteTo.Console()
-        .WriteTo.File(logPath, rollingInterval: RollingInterval.Day)
-        .CreateLogger();
+        .WriteTo.File(logPath, rollingInterval: RollingInterval.Day);
+
+#if DEBUG
+    loggerConfig.WriteTo.Console();
+#endif
+
+    Log.Logger = loggerConfig.CreateLogger();
 }

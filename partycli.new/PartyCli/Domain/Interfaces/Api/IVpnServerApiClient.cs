@@ -2,7 +2,7 @@ using PartyCli.Domain.Models;
 
 namespace PartyCli.Domain.Interfaces.Api;
 
-public interface IVpnServerApiRepository
+public interface IVpnServerApiClient
 {
     Task<List<Server>> GetServerByProtocolListAsync(Protocols vpnProtocol, CancellationToken cancellationToken = default);
     Task<List<Server>> GetAllServersListAsync(CancellationToken cancellationToken = default);

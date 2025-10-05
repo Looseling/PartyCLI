@@ -17,6 +17,11 @@ Examples:
 This repo includes a multi-stage Dockerfile that builds a small runtime image. by default it builds linux container.
 
   ```
+    // Make sure Dokcer Desktop or any Docker Enginer is running
+    
+    // Open the project folder
+    cd Partycli.new
+    
     // build the image
     docker build -t partycli:latest .
     

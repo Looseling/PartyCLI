@@ -1,18 +1,19 @@
+using System.ComponentModel;
 using Microsoft.Extensions.Logging;
 using PartyCli.Application.Services;
+using PartyCli.Domain;
 using PartyCli.Domain.Interfaces.Display;
 using PartyCli.Domain.Models;
 using Spectre.Console.Cli;
-using System.ComponentModel;
 
-namespace PartyCli.Commands;
+namespace PartyCli.Application.Commands;
 
 public class ServerListSettings : CommandSettings
 {
     [CommandOption("--local")]
     [Description("Display servers from local storage")]
     public bool Local { get; set; }
-    
+
     [CommandOption("--TCP")]
     [Description("Fetch TCP protocol servers")]
     public bool Tcp { get; set; }
@@ -28,8 +29,7 @@ public class ServerListCommand : AsyncCommand<ServerListSettings>
     private readonly IDisplayService _display;
     private readonly ILogger<ServerListCommand> _logger;
 
-    public ServerListCommand(
-        IServerService serverService,
+    public ServerListCommand(IServerService serverService,
         IDisplayService display,
         ILogger<ServerListCommand> logger)
     {
@@ -42,28 +42,20 @@ public class ServerListCommand : AsyncCommand<ServerListSettings>
     {
         try
         {
-            List<Server> servers;
+            var filter = new ServerFilter
+            {
+                Country = settings.Country,
+                Protocol = settings.Tcp ? Protocols.TCP : null,
+                Local = settings.Local
+            };
+            var servers = await _serverService.GetServersAsync(filter);
 
-            if (settings.Local)
+            if (!servers.Any())
             {
-                servers = await _serverService.GetLocalServersAsync();
-                
-                if (!servers.Any())
-                {
-                    _display.DisplayError("No local servers found");
-                    return 0;
-                }
-            }
-            else
-            {
-                var filter = BuildFilterAsync(settings);
-                servers = await _serverService.FetchAndSaveServersAsync(filter);
-                
-                if (!servers.Any())
-                {
-                    _display.DisplayWarning("No servers found matching criteria");
-                    return 0;
-                }
+                _display.DisplayWarning(settings.Local
+                    ? "No local servers found"
+                    : "No servers found matching criteria");
+                return 0;
             }
 
             _display.DisplayServers(servers);
@@ -75,19 +67,5 @@ public class ServerListCommand : AsyncCommand<ServerListSettings>
             _display.DisplayError($"Failed to fetch servers: {ex.Message}");
             return 1;
         }
-    }
-
-    private ServerFilter BuildFilterAsync(ServerListSettings settings)
-    {
-        if (!string.IsNullOrEmpty(settings.Country))
-        {
-            return ServerFilter.ForCountry(settings.Country);
-        }
-        if (settings.Tcp)
-        {
-            return ServerFilter.ForProtocol(Protocols.TCP);
-        }
-
-        return ServerFilter.All();
     }
 }

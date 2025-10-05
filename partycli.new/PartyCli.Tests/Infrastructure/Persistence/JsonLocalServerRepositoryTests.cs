@@ -5,20 +5,20 @@ using Shouldly;
 
 namespace PartyCli.Tests.Infrastructure.Persistence;
 
-public class JsonServerRepositoryTests : IDisposable
+public class JsonLocalServerRepositoryTests : IDisposable
 {
     private readonly string _testFilePath;
-    private readonly JsonServerRepository _repository;
-    
-    public JsonServerRepositoryTests()
+    private readonly JsonLocalServerRepository _repository;
+
+    public JsonLocalServerRepositoryTests()
     {
         _testFilePath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-        
+
         var mockPathProvider = new Mock<IFilePathProvider>();
         mockPathProvider.Setup(p => p.GetServerFilePath())
             .Returns(_testFilePath);
-        
-        _repository = new JsonServerRepository(mockPathProvider.Object);
+
+        _repository = new JsonLocalServerRepository(mockPathProvider.Object);
     }
 
     [Fact]
