@@ -67,9 +67,9 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
     // Infrastructure
     services.AddSingleton<IFilePathProvider, AppDataFilePathProvider>();
     services.AddSingleton<ILocalServerRepository, JsonLocalServerRepository>();
-    services.AddSingleton<IDisplayService, ConsoleDisplayService>();
     services.AddSingleton<ICountryLookup, CountryLookupFromDictionary>();
-    // services.AddSingleton<IDisplayService, ColoredConsoleDisplayService>();
+    // services.AddSingleton<IDisplayService, ConsoleDisplayService>();
+    services.AddSingleton<IDisplayService, ColoredConsoleDisplayService>();
 
     // Application
     services.AddSingleton<IServerService, ServerService>();
